@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Icons/rotateleft.png</file>
+        <file>Icons/rotateright.png</file>
+        <file>Icons/zoomin.png</file>
+        <file>Icons/zoomout.png</file>
+        <file>Icons/normalsize.png</file>
+        <file>Icons/fullscreen.png</file>
+    </qresource>
+</RCC>
