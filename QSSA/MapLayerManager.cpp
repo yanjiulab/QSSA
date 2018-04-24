@@ -68,8 +68,9 @@ bool MapLayerManager::removeLayer(QString lyr)
 void MapLayerManager::removeAllLayers()
 {
 	allLayers.clear();
-	currentLayer = NULL;
-	previousLayer = NULL;
+	layerModel->clear();
+	currentLayer = nullptr;
+	previousLayer = nullptr;
 }
 
 bool MapLayerManager::setCurLayer(QString curLyr)

@@ -81,9 +81,6 @@ public:
 	cv::Point2d pixel2world(const int&, const int&, const cv::Size&);
 
 	void add_color(cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r);
-
-	int run(const char *image_name, const char *dem_name);
-
 	bool run();
 	bool runWithGeog();
 

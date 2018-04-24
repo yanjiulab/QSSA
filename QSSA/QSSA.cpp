@@ -21,14 +21,17 @@ QSSA::QSSA(QWidget *parent)
 	connect(hillshadePushBtn, &QPushButton::clicked, this, &QSSA::procHillshade);
 	connect(colorReliefPushBtn, &QPushButton::clicked, this, &QSSA::procColorRelief);
 	connect(gdalinfoPushBtn, &QPushButton::clicked, this, &QSSA::procGDALInfo);
-	connect(submergePushBtn , &QPushButton::clicked, this, &QSSA::runSubmerge);
-	connect(submerge, &Submerge::submergeProgress, this, &QSSA::runProgress);
-	connect(submerge, &Submerge::submergeFinish, this, &QSSA::runFinish);
+	connect(gdalwarpPushBtn, &QPushButton::clicked, this, &QSSA::procGDALWarp);
+	connect(gdaltransPushBtn, &QPushButton::clicked, this, &QSSA::procGDALWarp);
 
 	connect(demList, SIGNAL(currentIndexChanged(int)), this, SLOT(setDEM()));
 	connect(landsatList, SIGNAL(currentIndexChanged(int)), this, SLOT(setLandsat()));
 	connect(matchList, SIGNAL(currentIndexChanged(int)), this, SLOT(setMatchMethod()));
 	connect(submergeList, SIGNAL(currentIndexChanged(int)), this, SLOT(setSubMethod()));
+
+	connect(submergePushBtn, &QPushButton::clicked, this, &QSSA::runSubmerge);
+	connect(submerge, &Submerge::submergeProgress, this, &QSSA::runProgress);
+	connect(submerge, &Submerge::submergeFinish, this, &QSSA::runFinish);
 }
 
 QSSA::~QSSA()
@@ -38,6 +41,7 @@ QSSA::~QSSA()
 
 bool QSSA::loadFile(const QString &fileName)
 {
+	statusBar()->showMessage(tr("Loading dataset, please waiting ..."));
 	MapLayer *layer = new MapLayer(fileName);
 	if (layer->readHeader())
 	{
@@ -63,7 +67,7 @@ bool QSSA::loadFile(const QString &fileName)
 	}
 	else
 	{
-		QMessageBox::critical(this, tr("Error!"), tr("Can not open file %1""%2").arg(fileName));
+		QMessageBox::critical(this, tr("Error!"), tr("Can not open file %1").arg(fileName));
 		return false;
 	}
 }
@@ -79,12 +83,6 @@ void QSSA::setupCenter()
 	viewer->view()->show();
 
 	setCentralWidget(viewer);
-
-	//connect(viewer->view()->verticalScrollBar(), SIGNAL(valueChanged(int)),
-	//	this, SLOT(Viewer->resetView()));
-	//connect(viewer->view()->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-	//	this, SLOT(setResetButtonEnabled()));
-	//connect(viewer, &MapViewer::layerChanged, this, &QSSA::setInfoModel);
 }
 
 void QSSA::setupMenuBar()
@@ -199,17 +197,20 @@ void QSSA::setupDockBrowserWindow()
 	dockDirWindow = new QDockWidget(tr("Browser"), this);
 	dockDirWindow->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 
-	QFileSystemModel *model = new QFileSystemModel;
-	model->setRootPath("");
+	fileModel = new QFileSystemModel;
+	fileModel->setRootPath(QDir::currentPath());
 	dirTree = new QTreeView(dockDirWindow);
-	dirTree->setModel(model);
-	dirTree->setRootIndex(model->index(""));
+	dirTree->setModel(fileModel);
+	dirTree->setRootIndex(fileModel->index(QDir::currentPath()));
 	dirTree->setColumnHidden(1, true);
 	dirTree->setColumnHidden(2, true);
 	dirTree->setColumnHidden(3, true);
 
 	dockDirWindow->setWidget(dirTree);
 	addDockWidget(Qt::LeftDockWidgetArea, dockDirWindow);
+
+	connect(dirTree, &QTreeView::doubleClicked, this, &QSSA::fileSelected);
+	
 }
 
 void QSSA::setupDockLayerWindow()
@@ -293,6 +294,14 @@ void QSSA::setupDockProcessWindow()
 	gdalinfoPushBtn->setEnabled(false);
 	gdalinfoPushBtn->setText(QStringLiteral("GDAL Info"));
 
+	gdalwarpPushBtn = new QPushButton(GDALGroupBox);
+	gdalwarpPushBtn->setEnabled(false);
+	gdalwarpPushBtn->setText(QStringLiteral("GDAL Warp"));
+
+	gdaltransPushBtn = new QPushButton(GDALGroupBox);
+	gdaltransPushBtn->setEnabled(false);
+	gdaltransPushBtn->setText(QStringLiteral("GDAL Translate"));
+
 	demList = new QComboBox(submergeGroupBox);
 	demList->setEnabled(false);
 
@@ -325,6 +334,11 @@ void QSSA::setupDockProcessWindow()
 	GDALLayout->addWidget(roughnessPushBtn, 0, Qt::AlignTop);
 	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Info")));
 	GDALLayout->addWidget(gdalinfoPushBtn, 0, Qt::AlignTop);
+	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Warp")));
+	GDALLayout->addWidget(gdalwarpPushBtn, 0, Qt::AlignTop);
+	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Translate")));
+	GDALLayout->addWidget(gdaltransPushBtn, 0, Qt::AlignTop);
+
 	GDALLayout->addStretch();
 
 	generalLayout->addWidget(new QLabel(QStringLiteral("Rotate horizontally")));
@@ -406,13 +420,13 @@ void QSSA::updateLayer()
 
 	/// update actions
 	saveAsAct->setEnabled(layerManager->getCurLayer());
-	//copyAct->setEnabled(!image.isNull());
 
 	zoomInAct->setEnabled(has_layer);
 	zoomOutAct->setEnabled(has_layer);
 	normalSizeAct->setEnabled(has_layer);
 	rotateLeftAct->setEnabled(has_layer);
 	rotateRightAct->setEnabled(has_layer);
+
 }
 
 void QSSA::selectionChangedSlot(const QItemSelection & newSelection, const QItemSelection & oldSelection)
@@ -514,7 +528,7 @@ void QSSA::setSubMethod()
 void QSSA::procHillshade()
 {
 	GDALDatasetH hillpoDataset = GDALDEMProcessing(
-		"Data/out_hillshade.tif",
+		"Data/Output/out_hillshade.tif",
 		GDALDatasetH(GDALDatasetH(layerManager->getCurLayer()->m_dataset)),
 		"hillshade",
 		NULL,
@@ -522,24 +536,13 @@ void QSSA::procHillshade()
 		NULL
 	);
 	GDALClose(hillpoDataset);
-	loadFile("Data/out_hillshade.tif");
+	loadFile("Data/Output/out_hillshade.tif");
 }
 
 void QSSA::procColorRelief()
 {
-	//char *papszArgv[] = { "-s", "111200", NULL };
-	/*GDALDatasetH slopepoDataset = GDALDEMProcessing(
-		"Data/out_slope.tif",
-		GDALDatasetH(poDataset),
-		"slope",
-		NULL,
-		GDALDEMProcessingOptionsNew(NULL, NULL),
-		NULL
-	);
-	GDALClose(slopepoDataset);*/
-
 	GDALDatasetH colorDataset = GDALDEMProcessing(
-		"Data/out_color_relief.tif",
+		"Data/Output/out_color_relief.tif",
 		GDALDatasetH(layerManager->getCurLayer()->m_dataset),
 		"color-relief",
 		"Config/color-relief.txt",
@@ -547,7 +550,7 @@ void QSSA::procColorRelief()
 		NULL
 	);
 	GDALClose(colorDataset);
-	loadFile("Data/out_color_relief.tif");
+	loadFile("Data/Output/out_color_relief.tif");
 }
 
 void QSSA::procGDALInfo()
@@ -559,20 +562,30 @@ void QSSA::procGDALInfo()
 	QMessageBox::information(this, tr("GDAL Information"), tr(info));
 }
 
+void QSSA::procGDALWarp()
+{
+}
+
+void QSSA::procGDALTrans()
+{
+}
+
 void QSSA::runSubmerge()
 {
+	statusBar()->showMessage(tr("Start running submerging analysis, please waiting ..."));
 	submerge->run();
 }
 
 void QSSA::runProgress(int line)
 {
-	int total = submerge->m_landsat->m_height;
-	statusBar()->showMessage(tr("Processing line = %1 , total = %2").arg(line).arg(total));
+	statusBar()->showMessage(tr("Processing line = %1 , total = %2")
+		.arg(line)
+		.arg(submerge->m_landsat->m_height));
 }
 
 void QSSA::runFinish()
 {
-	statusBar()->showMessage(tr("Submerging analysis finished, write results to 'Data' folder."));
+	statusBar()->showMessage(tr("Submerging analysis finished, already wrote results to 'Data/Output' folder."));
 }
 
 bool QSSA::saveFile(const QString &fileName)
@@ -600,8 +613,7 @@ static void initializeImageFileDialog(QFileDialog &dialog, QFileDialog::AcceptMo
 
 	if (firstDialog) {
 		firstDialog = false;
-		//const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
-		const QStringList picturesLocations;
+		const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
 		dialog.setDirectory(picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.last());
 	}
 
@@ -651,7 +663,11 @@ void QSSA::closeCurLayer()
 void QSSA::closeAllLayers()
 {
 	layerManager->removeAllLayers();
-	layerManager->updateLayerModel();
+	//layerManager->updateLayerModel();
+
+	// clear all model
+	dirTree = nullptr;
+	infoTree = nullptr;
 	scene->clear();
 	emit layerManager->layerChanged();
 }
@@ -672,6 +688,24 @@ void QSSA::about()
 			"(QScrollArea::widgetResizable), can be used to implement "
 			"zooming and scaling features. </p><p>In addition the example "
 			"shows how to use QPainter to print an image.</p>"));
+}
+
+void QSSA::fileSelected(const QModelIndex &index)
+{
+	if (fileModel->isDir(index))
+	{
+		return;
+	}
+	else
+	{
+		QString fileName = fileModel->filePath(index);
+		statusBar()->showMessage(fileName);
+		loadFile(fileName);
+	}
+
+	
+	
+	
 }
 
 

@@ -43,6 +43,8 @@ private slots:
 	void closeCurLayer();
 	void closeAllLayers();
 	void about();
+	// file browser
+	void fileSelected(const QModelIndex &index);
 	// layer manager
 	void updateLayer();
 	void selectionChangedSlot(const QItemSelection & newSelection, const QItemSelection & oldSelection);
@@ -52,6 +54,8 @@ private slots:
 	void procHillshade();
 	void procColorRelief();
 	void procGDALInfo();
+	void procGDALWarp();
+	void procGDALTrans();
 	// submerge
 	void setDEM();
 	void setLandsat();
@@ -85,6 +89,7 @@ private:
 	QDockWidget *dockImgLayerWindow = nullptr;
 	QDockWidget *dockImgInfoWindow = nullptr;
 	QDockWidget *dockImgProcessWindow = nullptr;
+	QFileSystemModel *fileModel = nullptr;
 	QTreeView *dirTree = nullptr;
 	QTreeView *infoTree = nullptr;
 	QTreeView *layerTree = nullptr;
@@ -104,7 +109,8 @@ private:
 	QPushButton *roughnessPushBtn = nullptr;
 
 	QPushButton *gdalinfoPushBtn = nullptr;
-
+	QPushButton *gdalwarpPushBtn = nullptr;
+	QPushButton *gdaltransPushBtn = nullptr;
 	/// Submerge 
 	QComboBox *demList = nullptr;
 	QComboBox *landsatList = nullptr;

@@ -334,9 +334,9 @@ bool Submerge::runWithGeog()
 	}
 
 	// print our heat map
-	cv::imwrite("Data/heat-map.jpg", output_dem);
+	cv::imwrite("Data/Output/heat-map.jpg", output_dem);
 	// print the flooding effect image
-	cv::imwrite("Data/flooded.jpg", output_dem_flood);
+	cv::imwrite("Data/Output/flooded.jpg", output_dem_flood);
 	emit submergeFinish();
 	return true;
 	/*QMessageBox::about(this,
