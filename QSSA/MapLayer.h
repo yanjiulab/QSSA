@@ -76,8 +76,9 @@ public:
 	bool readHeader();
 	bool readData();
 	void setMetaModel();
-	bool getQImage(cv::Mat img);
-
+	//bool getQImage();
+	QImage getQImage();
+	QImage cvt16bTo8b(cv::Mat &src);
 	
 
 };

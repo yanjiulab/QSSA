@@ -18,11 +18,13 @@
 // C++ Standard Libraries
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <vector>
 
 // User Headers
 #include "MapLayer.h"
+
 
 using namespace std;
 
@@ -33,6 +35,7 @@ class Submerge : public QWidget
 public:
 	Submerge();
 	~Submerge();
+	bool readConfig();
 
 	// define files
 	MapLayer *m_landsat = nullptr;
@@ -63,10 +66,9 @@ public:
 
 	// range of the heat map colors
 	std::vector<std::pair<cv::Vec3b, double> > color_range;
-
+	std::vector<std::pair<cv::Vec3b, double> > color_submerge;
 	// List of all function prototypes
 	cv::Point2d lerp(const cv::Point2d&, const cv::Point2d&, const double&);
-	
 	cv::Vec3b Submerge::lerp(
 		cv::Vec3b const& minColor, 
 		cv::Vec3b const& maxColor,
@@ -75,18 +77,20 @@ public:
 
 	//cv::Point2d pixel2utm(const int&, const int&, const cv::Size&);
 	//void utm2world();
-
 	cv::Point2d world2dem(const cv::Point2d&, const cv::Size&);
-
 	cv::Point2d pixel2world(const int&, const int&, const cv::Size&);
-
 	void add_color(cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r);
+	void add_color(cv::Vec3b& pix, cv::Vec3b color);
 	bool run();
-	bool runWithGeog();
+	bool runWithCRSPsv();
+	//bool runWithCRSAct();
+	//bool runWithFeaturePsv();
+	//bool runWithFeatureAct();
 
 signals:
-	void submergeProgress(int line);
 	void submergeFinish();
+	void submergeProgress(int line);
+
 };
 
 

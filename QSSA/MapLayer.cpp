@@ -562,47 +562,130 @@ bool MapLayer::readData()
 	return true;
 }
 
-bool MapLayer::getQImage(cv::Mat image)
+//bool MapLayer::getQImage()
+//{
+//	if (m_image.channels() == 1)
+//	{
+//		if (m_image.depth() == CV_8U) {
+//			m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_Grayscale8);
+//			return true;
+//		}
+//		else {
+//			m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_Grayscale8);
+//			/*QMessageBox::information(this, tr("Error!"),
+//				tr("Sorry, Qt now only supports displaying 8-bit grayscale image."
+//				   "You can use 'tools' to convert the image."));*/
+//			
+//			return true;
+//		}
+//	}
+//	else if (m_image.channels() == 3)
+//	{
+//		if (m_image.depth() != CV_8U) {
+//			QMessageBox::information(this, tr("Note!"),
+//				tr("Formats with more than 8 bit per color channel will only be processed by the raster engine using 8 bit per color."));
+//			return false;
+//		}
+//
+//		m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_RGB888);
+//		return true;
+//	}
+//	else if (m_image.channels() == 4)
+//	{
+//		if (m_image.depth() != CV_8U) {
+//			QMessageBox::information(this, tr("Note!"),
+//				tr("Formats with more than 8 bit per color channel will only be processed by the raster engine using 8 bit per color."));
+//			return false;
+//		}
+//
+//		m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_RGBA8888);
+//		return true;
+//	}
+//	else 
+//	{
+//		QMessageBox::critical(this, tr("Error!"), tr("Unknown QImage format"));
+//		return false;
+//	}
+//}
+
+QImage MapLayer::getQImage()
 {
-
-	if (image.channels() == 1)
+	QImage imageDraw;
+	if (m_image.channels() == 1)
 	{
-		if (image.depth() == CV_8U) {
-			m_imageDraw = QImage(image.data, image.cols, image.rows, image.step, QImage::Format_Grayscale8);
-			return true;
-		}
-		else {
-			QMessageBox::information(this, tr("Error!"),
-				tr("Sorry, Qt now only supports displaying 8-bit grayscale image."
-				   "You can use 'tools' to convert the image."));
-			return false;
-		}
+		imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_Grayscale8);
+		return imageDraw;
+		//if (image.depth() == CV_8U) {
+		//	imageDraw = QImage(image.data, image.cols, image.rows, image.step, QImage::Format_Grayscale8);
+		//	return imageDraw;
+		//}
+		//else {
+		//	m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_Grayscale8);
+		//	/*QMessageBox::information(this, tr("Error!"),
+		//	tr("Sorry, Qt now only supports displaying 8-bit grayscale image."
+		//	"You can use 'tools' to convert the image."));*/
+		//	return imageDraw;
+		//}
 	}
-	else if (image.channels() == 3)
+	else if (m_image.channels() == 3)
 	{
-		if (image.depth() != CV_8U) {
+		if (m_image.depth() != CV_8U) {
 			QMessageBox::information(this, tr("Note!"),
 				tr("Formats with more than 8 bit per color channel will only be processed by the raster engine using 8 bit per color."));
-			return false;
+			return QImage();
 		}
 
-		m_imageDraw = QImage(image.data, image.cols, image.rows, image.step, QImage::Format_RGB888);
-		return true;
+		imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_RGB888);
+		return imageDraw;
 	}
-	else if (image.channels() == 4)
+	else if (m_image.channels() == 4)
 	{
-		if (image.depth() != CV_8U) {
+		if (m_image.depth() != CV_8U) {
 			QMessageBox::information(this, tr("Note!"),
 				tr("Formats with more than 8 bit per color channel will only be processed by the raster engine using 8 bit per color."));
-			return false;
+			return QImage();
 		}
 
-		m_imageDraw = QImage(image.data, image.cols, image.rows, image.step, QImage::Format_RGBA8888);
-		return true;
+		m_imageDraw = QImage(m_image.data, m_image.cols, m_image.rows, m_image.step, QImage::Format_RGBA8888);
+		return imageDraw;
 	}
-	else 
+	else
 	{
 		QMessageBox::critical(this, tr("Error!"), tr("Unknown QImage format"));
-		return false;
+		return QImage();
 	}
+}
+
+QImage MapLayer::cvt16bTo8b(cv::Mat &src)
+{
+	// define table
+	/*uchar table[256];
+	for (int i = 0; i < 256; ++i)
+		table[i] = (uchar)((i / m_max[0]) * 256);*/
+	// copy src to dst mat
+	Mat dst = src.clone();
+	const int channels = dst.channels();
+	switch (channels)
+	{
+	case 1:
+	{
+		MatIterator_<short> it, end;
+		for (it = dst.begin<short>(), end = dst.end<short>(); it != end; ++it)
+			*it = (uchar)((*it) / m_max[0] * 255);
+		break;
+	}
+	case 3:
+	{
+		MatIterator_<Vec3s> it, end;
+		for (it = dst.begin<Vec3s>(), end = dst.end<Vec3s>(); it != end; ++it)
+		{
+			(*it)[0] = (uchar)((*it) / m_max[0] * 255)[0];
+			(*it)[1] = (uchar)((*it) / m_max[1] * 255)[1];
+			(*it)[2] = (uchar)((*it) / m_max[2] * 255)[2];
+		}
+	}
+	}
+	/*imwrite("Data/Output/8bit.jpg", dst);*/
+	QImage imageDraw = QImage(dst.data, dst.cols, dst.rows, src.step, QImage::Format_Grayscale8);
+	return imageDraw;
 }

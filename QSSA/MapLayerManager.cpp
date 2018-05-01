@@ -114,7 +114,7 @@ bool MapLayerManager::updateLayerModel()
 		//	++i;
 		//}
 	}
-
+	//QFileInfo fi(currentLayer->m_filename);
 	QStandardItem *layerNameItem = new QStandardItem(currentLayer->m_filename);
 	rootNode->appendRow(layerNameItem);
 

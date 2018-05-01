@@ -9,20 +9,55 @@ Submerge::Submerge()
 	// default 
 	m_matchMethod = BASE_GEOGCS;
 	m_submergeMethod = PASSIVE_SUBMERGING;
-
+	
 	// define the color range to create our output DEM heat map
-	//  Pair format ( Color, elevation );  Push from low to high
-	//  Note:  This would be perfect for a configuration file, but is here for a working demo.
+	// Pair format ( Color, elevation );  Push from low to high
+	// Note:  This would be perfect for a configuration file, but is here for a working demo.
+	// BGR
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(188, 154, 46), -1));//-1
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(110, 220, 110), 0.25));
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(150, 250, 230), 20));
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(160, 220, 200), 75));
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(220, 190, 170), 100));
 	color_range.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(250, 180, 140), 200));
+	// RGB
+	color_submerge.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(0, 0, 60), 10));
+	color_submerge.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(60, 60, 0), 20));
+	color_submerge.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(60, 30, 0), 50));
+	color_submerge.push_back(std::pair<cv::Vec3b, double>(cv::Vec3b(60, 0, 0), 100));
 }
 Submerge::~Submerge()
 {
 
+}
+
+bool Submerge::readConfig()
+{
+	ifstream config("Config/submerge-color.txt");
+	if (!config)
+	{
+		return false;
+	}
+	else
+	{
+		std::pair<cv::Vec3b, double> line;
+		double dz;
+		uchar b, g, r;
+		char buffer[20];
+		while (!config.eof())
+		{	
+			config.getline(buffer, 20);
+			sscanf(buffer, "%d %d %d %d", b, g, r, dz);
+
+			line.second = dz;
+			line.first[0] = b;
+			line.first[1] = g;
+			line.first[2] = r;
+			color_submerge.push_back(line);
+		}
+		config.close();
+		return true;
+	}
 }
 
 /*
@@ -145,12 +180,17 @@ cv::Point2d Submerge::world2dem(cv::Point2d const& coordinate, const cv::Size& d
 * Add color to a specific pixel color value
 */
 void Submerge::add_color(cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r) {
-
+	
 	if (pix[0] + b < 255 && pix[0] + b >= 0) { pix[0] += b; }
 	if (pix[1] + g < 255 && pix[1] + g >= 0) { pix[1] += g; }
 	if (pix[2] + r < 255 && pix[2] + r >= 0) { pix[2] += r; }
 }
-
+void Submerge::add_color(cv::Vec3b &pix, cv::Vec3b color)
+{
+	if (pix[0] + color[0] < 255 && pix[0] + color[0] >= 0) { pix[0] += color[0]; }
+	if (pix[1] + color[1] < 255 && pix[1] + color[1] >= 0) { pix[1] += color[1]; }
+	if (pix[2] + color[2] < 255 && pix[2] + color[2] >= 0) { pix[2] += color[2]; }
+}
 
 /*
 * Main Submerging Function
@@ -176,7 +216,15 @@ bool Submerge::run()
 	case Submerge::BASE_GEOGCS:
 		if (landsatSRS.IsGeographic() && demSRS.IsGeographic())
 		{
-			runWithGeog();
+			if (m_submergeMethod == PASSIVE_SUBMERGING)
+			{
+				runWithCRSPsv();
+			}
+			else
+			{
+				runWithCRSPsv();
+			}
+			
 			return true;
 		}
 		else
@@ -188,7 +236,15 @@ bool Submerge::run()
 	case Submerge::BASE_PROJCS:
 		if (landsatSRS.IsProjected() && demSRS.IsProjected())
 		{
-			//runWithProj();
+			if (m_submergeMethod == PASSIVE_SUBMERGING)
+			{
+				runWithCRSPsv();
+			}
+			else
+			{
+				runWithCRSPsv();
+			}
+			return true;
 		}
 		else
 		{
@@ -252,7 +308,7 @@ bool Submerge::run()
 	return 0;
 }
 
-bool Submerge::runWithGeog()
+bool Submerge::runWithCRSPsv()
 {
 	// define the corner points of landsat 
 	landsat_tl.x = m_landsat->m_origin.first;//0
@@ -316,27 +372,35 @@ bool Submerge::runWithGeog()
 			output_dem.at<cv::Vec3b>(y, x) = actualColor;
 
 			// show effect of a 10 meter increase in ocean levels
-			if (dz < 10) {
-				add_color(output_dem_flood.at<cv::Vec3b>(y, x), 30, 0, 0);
+			if (dz < color_submerge[0].second) {
+				add_color(output_dem_flood.at<cv::Vec3b>(y, x), color_submerge[0].first);
 			}
-			else if (dz < 20) {
-				add_color(output_dem_flood.at<cv::Vec3b>(y, x), 0, 30, 30);
+			else if (dz < color_submerge[1].second) {
+				add_color(output_dem_flood.at<cv::Vec3b>(y, x), color_submerge[1].first);
 			}
 			// show effect of a 50 meter increase in ocean levels
-			else if (dz < 50) {
-				add_color(output_dem_flood.at<cv::Vec3b>(y, x), 0, 15, 30);
+			else if (dz < color_submerge[2].second) {
+				add_color(output_dem_flood.at<cv::Vec3b>(y, x), color_submerge[2].first);
 			}
 			// show effect of a 100 meter increase in ocean levels
-			else if (dz < 100) {
-				add_color(output_dem_flood.at<cv::Vec3b>(y, x), 0, 0, 30);
+			else if (dz < color_submerge[3].second) {
+				add_color(output_dem_flood.at<cv::Vec3b>(y, x), color_submerge[3].first);
 			}
 		}
 	}
 
 	// print our heat map
-	cv::imwrite("Data/Output/heat-map.jpg", output_dem);
+	QFileInfo landFI(m_dem->m_filename);
+	QString heatmapDstName = "Data/Output/" + landFI.baseName() + "_heatmpa.jpg";
+	cv::imwrite(heatmapDstName.toStdString(), output_dem);
+
 	// print the flooding effect image
-	cv::imwrite("Data/Output/flooded.jpg", output_dem_flood);
+	QFileInfo demFI(m_landsat->m_filename);
+	QString floodDstName = "Data/Output/" + demFI.baseName() + "_flood.jpg";
+	Mat output_dem_flood_write;
+	cvtColor(output_dem_flood, output_dem_flood_write, CV_RGB2BGR);
+	cv::imwrite(floodDstName.toStdString(), output_dem_flood_write);
+
 	emit submergeFinish();
 	return true;
 	/*QMessageBox::about(this,
@@ -350,3 +414,109 @@ bool Submerge::runWithGeog()
 		.arg(landsat_tr.x).arg(landsat_tr.y)
 		.arg(landsat_br.x).arg(landsat_br.y));*/
 }
+
+//bool Submerge::runWithCRSAct()
+//{
+//	// define the corner points of landsat 
+//	landsat_tl.x = m_landsat->m_origin.first;//0
+//	landsat_tl.y = m_landsat->m_origin.second;//3
+//
+//	landsat_br.x = landsat_tl.x + m_landsat->m_pixelSize.first * m_landsat->m_width
+//		+ m_landsat->m_adfGeoTransform[2] * m_landsat->m_height;
+//
+//	landsat_br.y = landsat_tl.y + m_landsat->m_adfGeoTransform[2] * m_landsat->m_width
+//		+ m_landsat->m_pixelSize.second * m_landsat->m_height;
+//
+//	landsat_tr.x = landsat_br.x;
+//	landsat_tr.y = landsat_tl.y;
+//
+//	landsat_bl.x = landsat_tl.x;
+//	landsat_bl.y = landsat_br.y;
+//
+//	// define the corner points of dem
+//	dem_bl.x = m_dem->m_origin.first;
+//	dem_tr.y = m_dem->m_origin.second;
+//
+//	dem_bl.y = dem_tr.y + m_dem->m_adfGeoTransform[2] * m_dem->m_width
+//		+ m_dem->m_pixelSize.second * m_dem->m_height;
+//
+//	dem_tr.x = dem_bl.x + m_dem->m_pixelSize.first * m_dem->m_width
+//		+ m_dem->m_adfGeoTransform[2] * m_dem->m_height;
+//
+//	// create output
+//	cv::Mat output_dem(m_landsat->m_image.size(), CV_8UC3);
+//	cv::Mat output_dem_flood(m_landsat->m_image.size(), CV_8UC3);
+//
+//	// define a minimum elevation
+//	double minElevation = -10;
+//	cv::Point2d seedPoint;
+//	double dz = -10;
+//	cv::Mat isSubmerge(m_landsat->m_image.size(), CV_8UC1);
+//
+//	// iterate over each pixel in the image, computing the first seed point
+//	for (int y = 0; y < m_landsat->m_image.rows && dz != 0; y++) {
+//		for (int x = 0; x < m_landsat->m_image.cols && dz != 0; x++) {
+//			// convert the pixel coordinate to lat/lon coordinates
+//			cv::Point2d coordinate = pixel2world(x, y, m_landsat->m_image.size());
+//
+//			// compute the dem image pixel coordinate from lat/lon
+//			cv::Point2d dem_coordinate = world2dem(coordinate, m_dem->m_image.size());
+//
+//			// extract the elevation and seek for seed point
+//			if (dem_coordinate.x >= 0 && dem_coordinate.y >= 0 &&
+//				dem_coordinate.x < m_dem->m_image.cols && dem_coordinate.y < m_dem->m_image.rows) {
+//				dz = m_dem->m_image.at<short>(dem_coordinate);
+//				if (dz == 0) { seedPoint = cv::Point2d(x, y); }
+//			}
+//			else {
+//				dz = minElevation;
+//			}
+//		}
+//	}
+//
+//	// iterate over each pixel in the image, computing dem point
+//	for (int y = seedPoint.y; y < m_landsat->m_image.rows; y++)
+//	{
+//		for (int x = seedPoint.x; x < m_landsat->m_image.cols; x++)
+//		{
+//			if (y - 1 > 0 && y + 1 < m_landsat->m_image.rows &&
+//				x - 1 > 0 && x + 1 < m_landsat->m_image.cols)
+//			{
+//				cv::Point2i tl = (x - 1, y - 1);
+//				cv::Point2i tm = (x    , y - 1);
+//				cv::Point2i tr = (x + 1, y - 1);
+//				cv::Point2i ml = (x - 1, y    );
+//				cv::Point2i mr = (x + 1, y    );
+//				cv::Point2i bl = (x - 1, y + 1);
+//				cv::Point2i bm = (x    , y + 1);
+//				cv::Point2i br = (x + 1, y + 1);
+//				vector<Point2i> around;
+//				around.push_back(tl);
+//				around.push_back(tm);
+//				around.push_back(tr);
+//				around.push_back(ml);
+//				around.push_back(mr);
+//				around.push_back(bl);
+//				around.push_back(bm);
+//				around.push_back(br);
+//				//分别计算dz，开始画色
+//				//计算下一个点
+//				//cv::Point2d nextSeed = findSeed(around);
+//				
+//			}
+//			
+//			
+//		}
+//	}
+//}
+//Point2d findSeed(vector<Point2i> around)
+//{
+//	/*cv::Point2d coordinate = pixel2world(x, y, m_landsat->m_image.size());
+//	cv::Point2d dem_coordinate = world2dem(coordinate, m_dem->m_image.size());
+//	dz = m_dem->m_image.at<short>(dem_coordinate);*/
+//
+//	/*if (dem_coordinate.x >= 0 && dem_coordinate.y >= 0 &&
+//	dem_coordinate.x < m_dem->m_image.cols && dem_coordinate.y < m_dem->m_image.rows) {
+//	dz = m_dem->m_image.at<short>(dem_coordinate);
+//	}*/
+//}

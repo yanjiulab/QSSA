@@ -48,7 +48,6 @@ bool QSSA::loadFile(const QString &fileName)
 		layer->setMetaModel();
 		layer->initMatData();
 		layer->readData();
-		layer->getQImage(layer->m_image);
 
 		// add layer to layer manager
 		if (!layerManager->addLayer(layer)) 
@@ -58,6 +57,7 @@ bool QSSA::loadFile(const QString &fileName)
 		}
 
 		// update processing dock window
+		//QFileInfo fi(fileName);
 		demList->addItem(fileName);
 		landsatList->addItem(fileName);
 
@@ -341,8 +341,24 @@ void QSSA::setupDockProcessWindow()
 
 	GDALLayout->addStretch();
 
-	generalLayout->addWidget(new QLabel(QStringLiteral("Rotate horizontally")));
-	generalLayout->addWidget(new QLabel(QStringLiteral("Rotate horizontally")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Image Pyramids")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Basic Thresholding")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Thresholding inRange")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Sobel Derivatives")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Laplace Operator")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Canny Edge Detector")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Hough Line")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Hough Circle")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Remapping")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Histogram Equalization")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Histogram Calculation")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Template Matching")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Harris detector")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Shi-Tomasi detector")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Feature Detection")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Feature Description")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Feature Matching")));
+	generalLayout->addWidget(new QLabel(QStringLiteral("Images stitching ")));
 	generalLayout->addStretch();
 
 	submergeLayout->addWidget(new QLabel(QStringLiteral("DEM File")));
@@ -395,7 +411,7 @@ void QSSA::updateLayer()
 
 		// update central display window --> setImage()
 		scene->clear();
-		pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(layerManager->getCurLayer()->m_imageDraw));
+		pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(layerManager->getCurLayer()->getQImage()));
 		//pixmapItem->setFlags(QGraphicsPixmapItem::ItemIsSelectable | QGraphicsPixmapItem::ItemIsMovable);
 		pixmapItem->setAcceptHoverEvents(true);
 		scene->addItem(pixmapItem);
@@ -436,11 +452,12 @@ void QSSA::selectionChangedSlot(const QItemSelection & newSelection, const QItem
 	QString selectedText = index.data(Qt::DisplayRole).toString();
 
 	if (layerManager->setCurLayer(selectedText)) {
+		statusBar()->showMessage("Set current layer to : " + selectedText);
 		emit layerManager->layerChanged();
 	}
-
-	//show status bar
-	statusBar()->showMessage(selectedText);
+	else {
+		statusBar()->showMessage(tr("The selected layer %1 does not exist.").arg(selectedText));
+	}
 }
 
 void QSSA::saveLastMousePosition(const QPoint p)
@@ -527,8 +544,11 @@ void QSSA::setSubMethod()
 
 void QSSA::procHillshade()
 {
+	QFileInfo fi(layerManager->getCurLayer()->m_filename);
+	QString dstName = "Data/Output/" + fi.baseName() + "_hillshade.tif";
+
 	GDALDatasetH hillpoDataset = GDALDEMProcessing(
-		"Data/Output/out_hillshade.tif",
+		dstName.toLatin1(),
 		GDALDatasetH(GDALDatasetH(layerManager->getCurLayer()->m_dataset)),
 		"hillshade",
 		NULL,
@@ -536,13 +556,16 @@ void QSSA::procHillshade()
 		NULL
 	);
 	GDALClose(hillpoDataset);
-	loadFile("Data/Output/out_hillshade.tif");
+	loadFile(dstName);
 }
 
 void QSSA::procColorRelief()
 {
+	QFileInfo fi(layerManager->getCurLayer()->m_filename);
+	QString dstName = "Data/Output/" + fi.baseName() + "_color_relief.tif";
+
 	GDALDatasetH colorDataset = GDALDEMProcessing(
-		"Data/Output/out_color_relief.tif",
+		dstName.toLatin1(),
 		GDALDatasetH(layerManager->getCurLayer()->m_dataset),
 		"color-relief",
 		"Config/color-relief.txt",
@@ -550,7 +573,7 @@ void QSSA::procColorRelief()
 		NULL
 	);
 	GDALClose(colorDataset);
-	loadFile("Data/Output/out_color_relief.tif");
+	loadFile(dstName);
 }
 
 void QSSA::procGDALInfo()
