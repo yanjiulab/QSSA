@@ -22,7 +22,8 @@ QSSA::QSSA(QWidget *parent)
 	connect(colorReliefPushBtn, &QPushButton::clicked, this, &QSSA::procColorRelief);
 	connect(gdalinfoPushBtn, &QPushButton::clicked, this, &QSSA::procGDALInfo);
 	connect(gdalwarpPushBtn, &QPushButton::clicked, this, &QSSA::procGDALWarp);
-	connect(gdaltransPushBtn, &QPushButton::clicked, this, &QSSA::procGDALWarp);
+	connect(gdaltransPushBtn, &QPushButton::clicked, this, &QSSA::procGDALTrans);
+	connect(gdaladdoPushBtn, &QPushButton::clicked, this, &QSSA::procGDALAddo);
 
 	connect(demList, SIGNAL(currentIndexChanged(int)), this, SLOT(setDEM()));
 	connect(landsatList, SIGNAL(currentIndexChanged(int)), this, SLOT(setLandsat()));
@@ -302,6 +303,10 @@ void QSSA::setupDockProcessWindow()
 	gdaltransPushBtn->setEnabled(false);
 	gdaltransPushBtn->setText(QStringLiteral("GDAL Translate"));
 
+	gdaladdoPushBtn = new QPushButton(GDALGroupBox);
+	gdaladdoPushBtn->setEnabled(false);
+	gdaladdoPushBtn->setText(QStringLiteral("GDAL Addo"));
+
 	demList = new QComboBox(submergeGroupBox);
 	demList->setEnabled(false);
 
@@ -324,7 +329,7 @@ void QSSA::setupDockProcessWindow()
 	submergePushBtn->setEnabled(false);
 	submergePushBtn->setText(QStringLiteral("Submerging"));
 	// Construct panel
-	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL DEM")));
+	GDALLayout->addWidget(new QLabel(QStringLiteral("DEM")));
 	GDALLayout->addWidget(hillshadePushBtn, 0, Qt::AlignTop);
 	GDALLayout->addWidget(slopePushBtn, 0, Qt::AlignTop);
 	GDALLayout->addWidget(aspectPushBtn, 0, Qt::AlignTop);
@@ -332,13 +337,14 @@ void QSSA::setupDockProcessWindow()
 	GDALLayout->addWidget(TRIPushBtn, 0, Qt::AlignTop);
 	GDALLayout->addWidget(TPIPushBtn, 0, Qt::AlignTop);
 	GDALLayout->addWidget(roughnessPushBtn, 0, Qt::AlignTop);
-	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Info")));
+	GDALLayout->addWidget(new QLabel(QStringLiteral("Information")));
 	GDALLayout->addWidget(gdalinfoPushBtn, 0, Qt::AlignTop);
-	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Warp")));
+	GDALLayout->addWidget(new QLabel(QStringLiteral("Reprojection")));
 	GDALLayout->addWidget(gdalwarpPushBtn, 0, Qt::AlignTop);
-	GDALLayout->addWidget(new QLabel(QStringLiteral("GDAL Translate")));
+	GDALLayout->addWidget(new QLabel(QStringLiteral("Translate")));
 	GDALLayout->addWidget(gdaltransPushBtn, 0, Qt::AlignTop);
-
+	GDALLayout->addWidget(new QLabel(QStringLiteral("Add Overview")));
+	GDALLayout->addWidget(gdaladdoPushBtn, 0, Qt::AlignTop);
 	GDALLayout->addStretch();
 
 	generalLayout->addWidget(new QLabel(QStringLiteral("Image Pyramids")));
@@ -593,6 +599,10 @@ void QSSA::procGDALTrans()
 {
 }
 
+void QSSA::procGDALAddo()
+{
+}
+
 void QSSA::runSubmerge()
 {
 	statusBar()->showMessage(tr("Start running submerging analysis, please waiting ..."));
@@ -698,19 +708,18 @@ void QSSA::closeAllLayers()
 void QSSA::about()
 //! [15] //! [16]
 {
-	QMessageBox::about(this, tr("About Image Viewer"),
-		tr("<p>The <b>Image Viewer</b> example shows how to combine QLabel "
-			"and QScrollArea to display an image. QLabel is typically used "
-			"for displaying a text, but it can also display an image. "
-			"QScrollArea provides a scrolling view around another widget. "
-			"If the child widget exceeds the size of the frame, QScrollArea "
-			"automatically provides scroll bars. </p><p>The example "
-			"demonstrates how QLabel's ability to scale its contents "
-			"(QLabel::scaledContents), and QScrollArea's ability to "
-			"automatically resize its contents "
-			"(QScrollArea::widgetResizable), can be used to implement "
-			"zooming and scaling features. </p><p>In addition the example "
-			"shows how to use QPainter to print an image.</p>"));
+	QMessageBox::about(this, tr("About QSSA"),
+		tr("<p>The <b>QSSA</b> is the abbreviation of 'Qt System of Submerging Analysis'. "
+			"It's a tool for estimating the range of submerging area in coastal city "
+			"when the sea level are increasing. The QSSA depends on OpenCV, GDAL and Qt5. "
+			"Also, it is open source and you can get the source code in <i>https://github.com/liyanjiu/QSSA.</i></p>"
+			"<p>Usage:<ol><li>Selecting the landsat and DEM files analysed in the QComboBox</li>"
+			"<li>Selecting the match method. (BASE_GEOGCS or BASE_PROJCS)</li>"
+			"<li>Selecting the submerge method. (PASSIVE or ACTIVE)</li>"
+			"<li>Clicking 'run' button to start the simulation.</li></ol></p>"
+			"<p>In addition to submerging analysis, the QSSA also supports some general image "
+			"processing utilities, which are listed in the Processing Box.</p>"
+			"<p>Copyright(C) 2018 Yanjiu Li.</p>"));
 }
 
 void QSSA::fileSelected(const QModelIndex &index)
@@ -725,10 +734,6 @@ void QSSA::fileSelected(const QModelIndex &index)
 		statusBar()->showMessage(fileName);
 		loadFile(fileName);
 	}
-
-	
-	
-	
 }
 
 

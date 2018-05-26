@@ -118,10 +118,10 @@ bool MapLayerManager::updateLayerModel()
 	QStandardItem *layerNameItem = new QStandardItem(currentLayer->m_filename);
 	rootNode->appendRow(layerNameItem);
 
-	for (int j = 1; j <= currentLayer->m_channels; ++j)
+	/*for (int j = 1; j <= currentLayer->m_channels; ++j)
 	{
 		QStandardItem *layerBandItem = new QStandardItem(tr("band %1").arg(j));
 		layerNameItem->appendRow(layerBandItem);
-	}
+	}*/
 	return true;
 }

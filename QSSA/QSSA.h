@@ -56,6 +56,7 @@ private slots:
 	void procGDALInfo();
 	void procGDALWarp();
 	void procGDALTrans();
+	void procGDALAddo();
 	// submerge
 	void setDEM();
 	void setLandsat();
@@ -111,6 +112,8 @@ private:
 	QPushButton *gdalinfoPushBtn = nullptr;
 	QPushButton *gdalwarpPushBtn = nullptr;
 	QPushButton *gdaltransPushBtn = nullptr;
+	QPushButton *gdaladdoPushBtn = nullptr;
+
 	/// Submerge 
 	QComboBox *demList = nullptr;
 	QComboBox *landsatList = nullptr;
